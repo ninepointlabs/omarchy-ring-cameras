@@ -4,8 +4,10 @@ Local Ring camera browser for the Omarchy desktop. Lists your Ring cameras
 in a bar dropdown and opens a live view (in `mpv`), a snapshot, or recent
 event history (motion/ding/on-demand clips, also played in `mpv`) on demand.
 
-The panel lives at `~/.config/omarchy/plugins/ring-cameras/` (bar icon +
-dropdown, id `tim.ring-cameras`). This directory is the daemon it talks to.
+This repo *is* the plugin — clone it straight into
+`~/.config/omarchy/plugins/` (or install via `omarchy plugin add`, see
+Setup below) and it's both the bar widget (`Panel.qml`, `manifest.json`,
+id `tim.ring-cameras`) and the daemon it talks to (`src/`, `bin/`).
 
 ![Ring Cameras panel](docs/panel-screenshot.png)
 
@@ -69,10 +71,31 @@ dropdown, id `tim.ring-cameras`). This directory is the daemon it talks to.
 
 ## Setup
 
+Either install through Omarchy's plugin marketplace:
+
 ```bash
-npm install    # already done
-./install.sh   # symlinks + enables the systemd --user service
+omarchy plugin add https://github.com/ninepointlabs/omarchy-ring-cameras --enable
+cd ~/.config/omarchy/plugins/tim.ring-cameras
+npm install
+./install.sh
 ```
+
+...or clone it yourself anywhere and symlink it in:
+
+```bash
+git clone https://github.com/ninepointlabs/omarchy-ring-cameras
+cd omarchy-ring-cameras
+npm install
+ln -s "$PWD" ~/.config/omarchy/plugins/ring-cameras
+./install.sh   # symlinks omarchy-ring-cameras-ctl onto PATH, generates
+               # and enables the systemd --user service
+```
+
+`omarchy plugin add` only clones and validates — it doesn't run `npm
+install` or `install.sh` for you, so that second step is required either
+way. `install.sh` resolves `node` from your `PATH` and the repo's actual
+location at install time (not hardcoded), so it works regardless of which
+Node version manager you use or where you cloned it.
 
 Then open the "Ring Cameras" bar icon (right section). If no account is
 linked yet, the panel itself prompts for email/password (and a 2FA code if
@@ -116,8 +139,8 @@ omarchy-ring-cameras-ctl list_cameras
   (`setLight`, `setSiren`) — straightforward to add to `daemon.mjs` and the
   panel if wanted.
 - `package.json` pins `ring-client-api@^13.0.0`, which warns it wants Node
-  18/20/22; this machine runs Node 26 via mise. The undici/fetch mismatch
-  above was a direct consequence of that gap — worth assuming there could
+  18/20/22; this was developed and tested on Node 26. The undici/fetch
+  mismatch above was a direct consequence of that gap — worth assuming there could
   be others.
 - `npm audit` originally reported 7 transitive vulnerabilities, all several
   layers deep inside `werift` (the WebRTC library behind live view) and
@@ -138,3 +161,7 @@ omarchy-ring-cameras-ctl list_cameras
   path allow-listing (Wayland/audio sockets under `/run/user/<uid>`, plus
   this project's own data/state dirs under `~/.local/`) that hasn't been
   worked out yet.
+
+## License
+
+[MIT](LICENSE)

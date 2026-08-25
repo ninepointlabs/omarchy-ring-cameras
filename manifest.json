@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "tim.ring-cameras",
+  "name": "Ring Cameras",
+  "version": "0.1.0",
+  "author": "ninepointlabs",
+  "description": "Browse your Ring cameras: live view, snapshots, event history, and motion notifications from a bar dropdown.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Ring Cameras",
+    "description": "Live view, snapshots, event history, and motion notifications for your Ring cameras.",
+    "category": "Utilities",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "pollIntervalSec": 30
+    },
+    "schema": [
+      {
+        "key": "pollIntervalSec",
+        "type": "integer",
+        "label": "Status poll interval (seconds)",
+        "min": 10,
+        "max": 300,
+        "step": 5,
+        "defaultValue": 30
+      }
+    ]
+  }
+}
