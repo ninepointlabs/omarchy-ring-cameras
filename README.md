@@ -23,7 +23,17 @@ id `tim.ring-cameras`) and the daemon it talks to (`src/`, `bin/`).
   protocol over a Unix socket
   (`~/.local/state/omarchy/ring-cameras/control.sock`, mode 0600), and
   persists the refresh token every time Ring rotates it
-  (`onRefreshTokenUpdated`) so restarts don't need a re-login.
+  (`onRefreshTokenUpdated`) so restarts don't need a re-login. Both ends of
+  that socket protocol (`control-socket.mjs`'s server loop and `ctl.mjs`'s
+  client loop) cap how much they'll buffer waiting for a newline at 1 MiB —
+  found by review: without it, a malfunctioning local peer, or Ring itself
+  returning an oversized camera name/prompt/error, could grow the daemon's
+  buffer, `ctl.mjs`'s buffer, or the amount QML's `StdioCollector` retains
+  without bound. Verified live against both directions: flooding the
+  daemon's socket with 2 MiB and no newline gets it closed with
+  `message_too_large` well before the full flood lands, and pointing real
+  `ctl.mjs` at a fake server doing the same gets `response_too_large`
+  instead of hanging or growing.
 - Live view: `camera.streamVideo()` spawns ffmpeg internally and hands the
   daemon raw MPEG-TS bytes via `stdoutCallback`, which get piped straight
   into an `mpv -` window. One live view at a time — starting a new one

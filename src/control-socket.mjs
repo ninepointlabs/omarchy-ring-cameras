@@ -8,6 +8,14 @@ import { stateDir, socketPath } from "./paths.mjs";
 // disconnects. The socket file itself is the trust boundary: anything that
 // can open it already runs as this user, so there is no auth beyond
 // filesystem permissions (dir 0700, socket 0600).
+//
+// That trust boundary covers *identity*, not *behavior*: any local peer
+// (including a malfunctioning one, not just a malicious one) can still open
+// the socket and send bytes with no newline, and MAX_MESSAGE_BYTES is what
+// stops that from growing this buffer — and this long-lived daemon's
+// memory — without limit.
+const MAX_MESSAGE_BYTES = 1024 * 1024; // 1 MiB — far more than any real request/response needs
+
 export function createControlServer(handleCommand) {
   const watchers = new Set();
 
@@ -16,6 +24,11 @@ export function createControlServer(handleCommand) {
     let watching = false;
 
     socket.on("data", async (chunk) => {
+      if (buffer.length + chunk.length > MAX_MESSAGE_BYTES) {
+        socket.write(JSON.stringify({ ok: false, error: "message_too_large" }) + "\n");
+        socket.destroy();
+        return;
+      }
       buffer += chunk.toString("utf8");
       let newlineIndex;
       while ((newlineIndex = buffer.indexOf("\n")) !== -1) {

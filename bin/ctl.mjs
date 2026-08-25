@@ -17,10 +17,22 @@ if (!cmd) {
 // this short-lived process is alive. Resolves on the first newline rather
 // than waiting for stdin to close, since it's not guaranteed the writer
 // (the QML panel's Process) ever closes the child's stdin.
+//
+// MAX_MESSAGE_BYTES bounds this the same way it bounds the socket reads
+// below: whatever is on the other end of stdin, buffer growth stops well
+// short of exhausting memory instead of continuing until a newline shows up.
+const MAX_MESSAGE_BYTES = 1024 * 1024; // 1 MiB
+
 function readStdinLine() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let buffer = "";
     function onData(chunk) {
+      if (buffer.length + chunk.length > MAX_MESSAGE_BYTES) {
+        process.stdin.removeListener("data", onData);
+        process.stdin.pause();
+        reject(new Error("stdin_too_large"));
+        return;
+      }
       buffer += chunk.toString("utf8");
       const newlineIndex = buffer.indexOf("\n");
       if (newlineIndex !== -1) {
@@ -36,7 +48,13 @@ function readStdinLine() {
 
 let payload = {};
 if (useStdin) {
-  const line = (await readStdinLine()).trim();
+  let line;
+  try {
+    line = (await readStdinLine()).trim();
+  } catch {
+    process.stdout.write(JSON.stringify({ ok: false, error: "stdin_too_large" }) + "\n");
+    process.exit(1);
+  }
   if (line) {
     try {
       payload = JSON.parse(line);
@@ -62,6 +80,18 @@ socket.on("connect", () => {
 });
 
 socket.on("data", (chunk) => {
+  // Bounds what this process ever accumulates from the daemon before a
+  // newline arrives — the daemon enforces the same limit on its own
+  // buffering (see MAX_MESSAGE_BYTES in control-socket.mjs), but this side
+  // needs its own bound too: whatever ends up here also gets written to
+  // this process's stdout, which the QML panel retains in full via
+  // StdioCollector, so an unbounded read here means unbounded retention in
+  // the long-lived shell process, not just this short-lived one.
+  if (buffer.length + chunk.length > MAX_MESSAGE_BYTES) {
+    process.stdout.write(JSON.stringify({ ok: false, error: "response_too_large" }) + "\n");
+    socket.destroy();
+    process.exit(1);
+  }
   buffer += chunk.toString("utf8");
   let newlineIndex;
   while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
