@@ -1,0 +1,15 @@
+[Unit]
+Description=Omarchy Ring cameras daemon
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/mise/shims/node %h/Projects/omarchy-ring-cameras/src/daemon.mjs
+Restart=on-failure
+RestartSec=2
+LimitCORE=0
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

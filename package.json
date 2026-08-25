@@ -1,0 +1,17 @@
+{
+  "name": "omarchy-ring-cameras",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Ring camera browser/live-view daemon for the Omarchy desktop: lists your Ring cameras and launches a live view or snapshot on request.",
+  "bin": {
+    "omarchy-ring-cameras-ctl": "./bin/ctl.mjs"
+  },
+  "scripts": {
+    "start": "node src/daemon.mjs"
+  },
+  "dependencies": {
+    "ring-client-api": "^13.0.0",
+    "undici": "^6.21.0"
+  }
+}
