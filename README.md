@@ -7,6 +7,8 @@ event history (motion/ding/on-demand clips, also played in `mpv`) on demand.
 The panel lives at `~/.config/omarchy/plugins/ring-cameras/` (bar icon +
 dropdown, id `tim.ring-cameras`). This directory is the daemon it talks to.
 
+![Ring Cameras panel](docs/panel-screenshot.png)
+
 ## How it works
 
 - `src/creds.mjs` — stores your Ring `refreshToken` in
