@@ -13,5 +13,9 @@
   "dependencies": {
     "ring-client-api": "^13.0.0",
     "undici": "^6.21.0"
+  },
+  "overrides": {
+    "uuid": "^14.0.0",
+    "parseuri": "^3.0.0"
   }
 }

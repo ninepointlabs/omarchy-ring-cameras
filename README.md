@@ -119,9 +119,22 @@ omarchy-ring-cameras-ctl list_cameras
   18/20/22; this machine runs Node 26 via mise. The undici/fetch mismatch
   above was a direct consequence of that gap — worth assuming there could
   be others.
-- `npm install` reported 7 vulnerabilities (5 moderate, 2 high) in
-  transitive dependencies — worth an `npm audit` pass before relying on
-  this daily.
-- The systemd unit intentionally skips `ProtectHome`/`ProtectSystem`
+- `npm audit` originally reported 7 transitive vulnerabilities, all several
+  layers deep inside `werift` (the WebRTC library behind live view) and
+  `socket.io-client`. Triaged: `uuid` and `parseuri` had patched versions,
+  now pinned via `package.json`'s `overrides` field, which fixed 4 of the
+  7 — live view re-tested afterward (start, confirmed streaming, stop) to
+  make sure pinning them didn't break the WebRTC signaling path, since
+  that's exactly where they sit. The remaining 3 are all the same `ip`
+  package SSRF advisory (counted once per dependency path): it has no
+  patched version at all (`npm audit` lists it as `ip *` — every published
+  version matches), so there's nothing to update to. Low real-world risk
+  here regardless, since it's only used internally against Ring's own
+  relay servers, never attacker-controlled input.
+- The systemd unit sets `LimitCORE=0`, `NoNewPrivileges=true`, and
+  `PrivateTmp=true`, but intentionally skips `ProtectHome`/`ProtectSystem`
   sandboxing (unlike a headless daemon) because it needs to spawn `mpv`
-  against your live Wayland session.
+  against your live Wayland session, and doing that safely needs careful
+  path allow-listing (Wayland/audio sockets under `/run/user/<uid>`, plus
+  this project's own data/state dirs under `~/.local/`) that hasn't been
+  worked out yet.
