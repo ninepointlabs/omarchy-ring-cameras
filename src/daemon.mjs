@@ -196,10 +196,28 @@ async function startLiveView(cameraId) {
     { stdio: ["pipe", "ignore", "ignore"] },
   );
 
+  // Closing the mpv window (or mpv dying) while streamVideo() is still handing
+  // us chunks breaks the pipe, and the next write lands an asynchronous EPIPE
+  // on mpv.stdin. With no listener Node promotes that to an unhandled 'error'
+  // and kills the whole daemon — systemd restarts it, but the camera list and
+  // any active session are gone — so every live view ended by closing its
+  // window was taking the daemon down. Swallow the pipe-teardown errors; the
+  // mpv "exit" handler below does the actual cleanup.
+  mpv.stdin.on("error", (err) => {
+    if (err?.code !== "EPIPE" && err?.code !== "ERR_STREAM_DESTROYED") {
+      log(`live view mpv stdin error: ${err?.message || err}`);
+    }
+  });
+
   const session = await camera.streamVideo({
     output: ["-f", "mpegts", "pipe:1"],
     stdoutCallback: (chunk) => {
-      if (!mpv.killed && mpv.stdin.writable) mpv.stdin.write(chunk);
+      if (mpv.killed || !mpv.stdin.writable) return;
+      try {
+        mpv.stdin.write(chunk);
+      } catch {
+        /* pipe closed between the check and the write; mpv "exit" cleans up */
+      }
     },
   });
 
