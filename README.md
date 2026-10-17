@@ -113,6 +113,15 @@ your account uses it) — no terminal step needed. `bin/setup.mjs` still
 exists as a CLI fallback with the same login logic, useful for debugging
 from a terminal with visible output.
 
+**About.** The 󰋽 button at the top right of the dropdown shows the About
+page: version, license (readable in place), Nine Point Labs, the support
+address, [help@ninepointlabs.com](mailto:help@ninepointlabs.com), with
+*Email*, *Copy* and *Copy version details* buttons, and exactly what the
+plugin sends where (your video and account data go to Ring/Amazon under
+Ring's terms; nothing goes to Nine Point Labs). *Back* or `Esc` returns;
+closing the dropdown resets it. It reads only the plugin's own files, so it
+works with the daemon stopped or no account linked.
+
 ## Operating it
 
 ```bash
@@ -171,6 +180,19 @@ omarchy-ring-cameras-ctl list_cameras
   path allow-listing (Wayland/audio sockets under `/run/user/<uid>`, plus
   this project's own data/state dirs under `~/.local/`) that hasn't been
   worked out yet.
+
+## Tests
+
+```bash
+npm ci
+npm test    # node --test tests/
+```
+
+Checks the About page's facts against the real `manifest.json`, `LICENSE`
+and first commit, and that its privacy statement names every host in the
+plugin, the daemon and the Ring libraries it runs (`ring-client-api`, its
+push receiver). They read source files only; no credentials, daemon,
+socket or Ring server is touched.
 
 ## License
 

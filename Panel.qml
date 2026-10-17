@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
+import "About.js" as About
 
 Panel {
   id: root
@@ -37,6 +38,30 @@ Panel {
   readonly property color dim: Qt.darker(foreground, 1.5)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
   readonly property color barIconColor: !daemonReachable ? urgent : (activeLiveView !== "" ? foreground : Qt.darker(barForeground, 1.3))
+
+  // The About page replaces the camera list inside the same dropdown. Its
+  // facts (version from manifest.json, LICENSE) are read from this plugin's
+  // own folder the first time it is shown; it never calls the daemon.
+  property bool showAbout: false
+  property bool aboutLoaded: false
+  property string aboutManifest: ""
+  property string aboutLicense: ""
+  readonly property string quickshellVersion: About.probedVersion(function(a, b) { return Quickshell.hasVersion(a, b) }, 0)
+  readonly property string qtVersion: About.probedVersion(function(a, b) { return Quickshell.hasQtVersion(a, b) }, 6)
+
+  function pluginFile(name) {
+    var url = String(Qt.resolvedUrl(name))
+    return url.indexOf("file://") === 0 ? decodeURIComponent(url.substring(7)) : url
+  }
+
+  function setAbout(on) {
+    root.showAbout = !!on
+    panelFlick.contentY = 0
+    if (on) {
+      root.aboutLoaded = true
+      escCatcher.forceActiveFocus()
+    }
+  }
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -207,9 +232,21 @@ Panel {
     })
   }
 
-  onOpenedChanged: if (opened) { root.errorText = ""; root.refreshStatus() }
+  onOpenedChanged: if (opened) { root.errorText = ""; root.refreshStatus() } else root.showAbout = false
 
   Component.onCompleted: root.refreshStatus()
+
+  FileView {
+    path: root.aboutLoaded ? root.pluginFile("manifest.json") : ""
+    printErrors: false
+    onLoaded: root.aboutManifest = text()
+  }
+
+  FileView {
+    path: root.aboutLoaded ? root.pluginFile("LICENSE") : ""
+    printErrors: false
+    onLoaded: root.aboutLicense = text()
+  }
 
   Process {
     id: actionProcess
@@ -297,28 +334,44 @@ Panel {
     open: root.opened
     focusTarget: escCatcher
     contentWidth: panel.fittedContentWidth(Style.space(360))
-    contentHeight: panel.fittedContentHeight(column.implicitHeight, Style.space(560))
+    contentHeight: panel.fittedContentHeight(root.showAbout ? aboutView.implicitHeight : column.implicitHeight, Style.space(560))
 
     Item {
       id: escCatcher
       anchors.fill: parent
       focus: true
-      Keys.onEscapePressed: root.close()
+      // Esc steps back out of About before it closes the dropdown.
+      Keys.onEscapePressed: root.showAbout ? root.setAbout(false) : root.close()
 
       Flickable {
         id: panelFlick
         anchors.fill: parent
         contentWidth: width
-        contentHeight: column.implicitHeight
+        contentHeight: root.showAbout ? aboutView.implicitHeight : column.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         flickableDirection: Flickable.VerticalFlick
         interactive: contentHeight > height
         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
+        AboutView {
+          id: aboutView
+          width: panelFlick.width
+          visible: root.showAbout
+          foreground: root.foreground
+          accent: Color.accent
+          fontFamily: root.fontFamily
+          version: About.manifestVersion(root.aboutManifest)
+          licenseText: root.aboutLicense
+          quickshellVersion: root.quickshellVersion
+          qtVersion: root.qtVersion
+          onBackRequested: root.setAbout(false)
+        }
+
         Column {
           id: column
           width: panelFlick.width
+          visible: !root.showAbout
           spacing: Style.space(12)
 
           PanelHero {
@@ -330,16 +383,30 @@ Panel {
               : root.cameras.length + " camera" + (root.cameras.length === 1 ? "" : "s")
             foreground: root.foreground
             fontFamily: root.fontFamily
-            trailingControl: root.activeLiveView !== "" ? stopLiveButton : null
+            trailingControl: heroTrailing
           }
 
           Component {
-            id: stopLiveButton
-            Button {
-              text: "Stop"
-              foreground: root.foreground
-              bordered: true
-              onClicked: root.stopLive()
+            id: heroTrailing
+            Row {
+              spacing: Style.space(6)
+              Button {
+                visible: root.activeLiveView !== ""
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Stop"
+                foreground: root.foreground
+                bordered: true
+                onClicked: root.stopLive()
+              }
+              PanelActionButton {
+                objectName: "aboutButton"
+                anchors.verticalCenter: parent.verticalCenter
+                iconText: "󰋽"
+                tooltipText: "About Ring Cameras"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                onClicked: root.setAbout(true)
+              }
             }
           }
 
