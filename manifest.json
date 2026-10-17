@@ -3,7 +3,7 @@
   "id": "tim.ring-cameras",
   "name": "Ring Cameras",
   "version": "0.1.0",
-  "author": "ninepointlabs",
+  "author": "Nine Point Labs",
   "description": "Browse your Ring cameras: live view, snapshots, event history, and motion notifications from a bar dropdown.",
   "kinds": [
     "bar-widget"
